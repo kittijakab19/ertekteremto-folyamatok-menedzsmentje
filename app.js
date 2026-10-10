@@ -20,7 +20,7 @@ var LEAD = { s:"Válaszd ki a helyes választ", m:"Jelöld be az összes helyes 
 
 var LS = "etfm-zh.v1";
 var store = { view:"book", ch:"j1", bookView:"full", lec:"e1", slide:{e1:0,e2:0}, onlyCore:false, topics:TOPS.slice(), calc:true, examMin:30,
-  quizView:"start", exam:null, stats:{}, scroll:{}, calcType:"sup", calcStats:{sup:{ok:0,n:0},grav:{ok:0,n:0}}, prKind:"all", prLen:20 };
+  quizView:"start", exam:null, stats:{}, scroll:{}, calcType:"sup", calcStats:{sup:{ok:0,n:0},grav:{ok:0,n:0}}, calcHist:[], calcView:"task", histF:"all", prKind:"all", prLen:20 };
 try{ var raw = localStorage.getItem(LS); if(raw){ var p = JSON.parse(raw); for(var k in p) store[k] = p[k]; } }catch(e){}
 store.examMin = 30;
 function save(){ try{ localStorage.setItem(LS, JSON.stringify(store)); }catch(e){} }
@@ -550,26 +550,79 @@ function wireTopics(root, after){
 var calcState = null;
 function newCalc(sample){
   var c = store.calcType === "sup" ? genSup(sample) : genGrav(sample);
-  calcState = { c:c, v:{}, checked:false, steps:false, sample:!!sample };
+  calcState = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), c:c, v:{}, checked:false, steps:false, sample:!!sample };
+}
+function calcScore(c, v){
+  var fs = calcFields(c, true), n = 0;
+  fs.forEach(function(f){ var val = v[f[0]]; if(f[4]==="sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2])) n++; });
+  return { ok:n, n:fs.length };
+}
+function saveHist(cs){
+  var h = store.calcHist = store.calcHist || [], sc = calcScore(cs.c, cs.v);
+  var e = { id:cs.id, ts:Date.now(), c:cs.c, v:JSON.parse(JSON.stringify(cs.v)), ok:sc.ok, n:sc.n, sample:cs.sample };
+  for(var i=0;i<h.length;i++){ if(h[i].id === cs.id){ h.splice(i,1); break; } }
+  h.unshift(e); if(h.length > 80) h.length = 80; save();
+}
+function histSummary(c){
+  var d = c.d;
+  if(c.type === "sup") return d.sup.length+" beszállító · min. ár "+hu(d.min,0)+" € · "+d.week+". hét · "+d.pen+" büntetőpont/hét · súlyok "+wfmt(d.wP)+"/"+wfmt(d.wD);
+  return d.pts.length+" üzlet · "+d.pts.map(function(p){ return p[0]+" ["+p[1]+"; "+p[2]+"]"; }).join(", ");
+}
+function renderCalcHist(){
+  var h = store.calcHist || [], f = store.histF || "all";
+  var shown = h.filter(function(e){ return f === "all" || e.c.type === f; });
+  $main.innerHTML = '<div class="head"><div><span class="eyebrow">Számolás · előzmények</span><h2>Megoldott feladataim</h2>'+
+    '<p>Minden ellenőrzött feladat ide kerül, ugyanazokkal a számokkal és a te válaszaiddal. Megnyithatod a válaszaiddal és a levezetéssel, vagy újra megoldhatod üresen.</p></div>'+
+    '<button class="btn" id="hBack">← Vissza a számoláshoz</button></div>'+
+    '<div class="rfilter" style="margin-top:0">'+[["all","Mind ("+h.length+")"],["sup","Beszállítóértékelés"],["grav","Gravitációs központ"]].map(function(x){ return '<button class="chtab" data-hf="'+x[0]+'" aria-pressed="'+(f===x[0])+'">'+x[1]+'</button>'; }).join("")+'</div>'+
+    '<div class="review">'+(shown.length ? shown.map(function(e){
+      var v = e.ok === e.n ? "ok" : e.ok ? "half" : "no", dt = new Date(e.ts);
+      return '<article class="rv '+v+'" data-src="t8"><div class="rvhead"><span class="chip src">'+(e.c.type === "sup" ? "Beszállítóértékelés" : "Gravitációs központ")+'</span>'+(e.sample ? '<span class="chip">mintafeladat</span>' : '')+
+        '<span class="kbd">'+dt.toLocaleDateString("hu-HU")+' '+dt.toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit"})+'</span>'+
+        '<span class="rvst '+v+'">'+e.ok+' / '+e.n+' helyes</span></div>'+
+        '<p style="margin:0;color:var(--ink-2);font-size:14px">'+esc(histSummary(e.c))+'</p>'+
+        '<div class="fbrow" style="justify-content:flex-start"><button class="btn primary sm" data-ho="'+e.id+'">Megnyitás a válaszaimmal</button><button class="btn sm" data-hr="'+e.id+'">Újra megoldom üresen</button><button class="btn ghost sm" data-hd="'+e.id+'">Törlés</button></div></article>';
+    }).join("") : '<p class="empty">Még nincs megoldott feladat. Ellenőrizz egyet a Számolás oldalon, és itt megjelenik.</p>')+'</div>';
+  function find(id){ for(var i=0;i<h.length;i++) if(h[i].id === id) return h[i]; return null; }
+  document.getElementById("hBack").onclick = function(){ store.calcView = "task"; save(); renderCalc(); window.scrollTo(0,0); };
+  $main.querySelectorAll("[data-hf]").forEach(function(b){ b.onclick = function(){ store.histF = b.dataset.hf; save(); renderCalc(); }; });
+  $main.querySelectorAll("[data-ho],[data-hr]").forEach(function(b){ b.onclick = function(){
+    var e = find(b.dataset.ho || b.dataset.hr), keep = !!b.dataset.ho; if(!e) return;
+    calcState = { id:e.id, c:e.c, v: keep ? JSON.parse(JSON.stringify(e.v)) : {}, checked:keep, steps:keep, sample:e.sample, counted:keep };
+    store.calcType = e.c.type; store.calcView = "task"; save(); renderCalc(); window.scrollTo(0,0);
+  }; });
+  $main.querySelectorAll("[data-hd]").forEach(function(b){ var armed = false; b.onclick = function(){
+    if(!armed){ armed = true; b.textContent = "Biztosan?"; setTimeout(function(){ armed = false; if(b.isConnected) b.textContent = "Törlés"; }, 3000); return; }
+    store.calcHist = h.filter(function(x){ return x.id !== b.dataset.hd; }); save(); renderCalc();
+  }; });
 }
 function renderCalc(){
+  var histN = (store.calcHist || []).length;
+  if(store.calcView === "hist"){ railCalc(); return renderCalcHist(); }
   if(!calcState || calcState.c.type !== store.calcType) newCalc(false);
   var cs = calcState, c = cs.c, fs = calcFields(c, true);
-  var st = store.calcStats;
+  railCalc();
+  var title = c.type === "sup" ? "Beszállítóértékelés – súlyozott pontrendszer" : "Telephelyválasztás – gravitációs központ";
+  calcMain(cs, c, fs, title);
+}
+function railCalc(){
+  var st = store.calcStats, histN = (store.calcHist || []).length;
   $rail.innerHTML = '<div class="field"><span class="lbl">Feladattípus</span><div class="srcs">'+
     [["sup","Beszállítóértékelés","súlyozott pontrendszer"],["grav","Telephelyválasztás","gravitációs központ"]].map(function(x){
       return '<label><input type="radio" name="ct" value="'+x[0]+'"'+(store.calcType===x[0]?" checked":"")+'><span class="tx">'+x[1]+'<br><span class="kbd">'+x[2]+'</span></span></label>'; }).join("")+'</div></div>'+
-    '<div class="field"><button class="btn primary" id="cNew" style="width:100%">Új adatok</button><button class="btn" id="cSample" style="width:100%;margin-top:6px">Mintafeladat a diáról</button></div>'+
+    '<div class="field"><button class="btn primary" id="cNew" style="width:100%">Új adatok</button><button class="btn" id="cSample" style="width:100%;margin-top:6px">Mintafeladat a diáról</button>'+
+    '<button class="btn" id="cHist" style="width:100%;margin-top:6px">Megoldott feladataim ('+histN+')</button></div>'+
     '<div class="field"><span class="lbl">Eddig</span><div class="statgrid">'+
       '<div class="stat"><div class="v">'+st.sup.ok+' / '+st.sup.n+'</div><div class="k">Beszállító · hibátlan</div></div>'+
       '<div class="stat"><div class="v">'+st.grav.ok+' / '+st.grav.n+'</div><div class="k">Gravitáció · hibátlan</div></div></div>'+
       '<p class="hint">A ZH-n 2% hibahatárral fogadják el az eredményt; 2 tizedesjegyre elég kerekíteni. Tizedesvessző és -pont is jó.</p></div>';
   $rail.style.overflow = "auto";
-  $rail.querySelectorAll("input[name=ct]").forEach(function(r){ r.onchange = function(){ store.calcType = r.value; save(); newCalc(false); renderCalc(); }; });
-  document.getElementById("cNew").onclick = function(){ newCalc(false); renderCalc(); };
-  document.getElementById("cSample").onclick = function(){ newCalc(true); renderCalc(); };
-
-  var title = c.type === "sup" ? "Beszállítóértékelés – súlyozott pontrendszer" : "Telephelyválasztás – gravitációs központ";
+  $rail.querySelectorAll("input[name=ct]").forEach(function(r){ r.onchange = function(){ store.calcType = r.value; store.calcView = "task"; save(); newCalc(false); renderCalc(); }; });
+  document.getElementById("cNew").onclick = function(){ store.calcView = "task"; save(); newCalc(false); renderCalc(); };
+  document.getElementById("cSample").onclick = function(){ store.calcView = "task"; save(); newCalc(true); renderCalc(); };
+  document.getElementById("cHist").onclick = function(){ store.calcView = "hist"; save(); renderCalc(); window.scrollTo(0,0); };
+}
+function calcMain(cs, c, fs, title){
   var rows = fs.map(function(f){
     var state = null;
     if(cs.checked){ var val = cs.v[f[0]], ok = f[4] === "sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2]);
@@ -587,14 +640,15 @@ function renderCalc(){
     (c.type === "grav" ? '<div class="fillfig gravfig" style="margin-top:4px">'+figHtml("gravity", null, c.d.pts.map(function(p){ return [p[0],p[1],p[2],p[3]]; }))+'</div>' : "")+
     '<div class="calcgrid" id="cgrid">'+grouped+'</div>'+
     (cs.checked ? '<div class="fb"><div class="verdict '+(nOk===fs.length?"ok":nOk?"half":"no")+'"><span class="m"><span>'+(nOk===fs.length?"✓":"!")+'</span></span>'+nOk+' / '+fs.length+' részeredmény helyes</div></div>' : "")+
-    '<div class="fbrow" style="margin-top:18px;justify-content:flex-start"><button class="btn primary" id="cCheck">Ellenőrzés</button><button class="btn" id="cSteps">'+(cs.steps?"Levezetés elrejtése":"Megoldás lépésenként")+'</button><button class="btn ghost" id="cNew2">Új adatok →</button></div>'+
+    '<div class="fbrow" style="margin-top:18px;justify-content:flex-start"><button class="btn primary" id="cCheck">Ellenőrzés</button><button class="btn" id="cSteps">'+(cs.steps?"Levezetés elrejtése":"Megoldás lépésenként")+'</button><button class="btn ghost" id="cNew2">Új adatok →</button>'+((store.calcHist||[]).some(function(e){ return e.id === cs.id; }) ? '<span class="kbd">✓ mentve a megoldott feladataim közé</span>' : '')+'</div>'+
     (cs.steps ? '<div class="steps"><span class="lbl">Levezetés</span>'+calcSteps(c)+'</div>' : "")+
     '</section>';
   wireAnswer(document.getElementById("cgrid"), cs, function(){ if(cs.checked){ cs.checked = false; } });
   document.getElementById("cCheck").onclick = function(){
     var first = !cs.checked && !cs.counted; cs.checked = true;
     var all = fs.every(function(f){ var val = cs.v[f[0]]; return f[4]==="sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2]); });
-    if(!cs.counted){ cs.counted = true; store.calcStats[c.type].n++; if(all) store.calcStats[c.type].ok++; save(); }
+    if(!cs.counted){ cs.counted = true; store.calcStats[c.type].n++; if(all) store.calcStats[c.type].ok++; }
+    saveHist(cs);
     var y = window.scrollY; renderCalc(); window.scrollTo(0, y);
   };
   document.getElementById("cSteps").onclick = function(){ cs.steps = !cs.steps; var y = window.scrollY; renderCalc(); window.scrollTo(0, y); };
