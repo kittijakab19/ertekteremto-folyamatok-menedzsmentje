@@ -19,9 +19,10 @@ var KIND = { s:"egy helyes válasz", m:"több helyes válasz", g:"csoportosítá
 var LEAD = { s:"Válaszd ki a helyes választ", m:"Jelöld be az összes helyes választ", g:"Sorold be az elemeket (lehet kakukktojás is)", f:"Írd be a hiányzó kifejezéseket", l:"Sorold fel", c:"Olvasd el az esetet, és válaszolj", calc:"Számold ki — 2 tizedesjegyre elég" };
 
 var LS = "etfm-zh.v1";
-var store = { view:"book", ch:"j1", bookView:"full", lec:"e1", slide:{e1:0,e2:0}, onlyCore:false, topics:TOPS.slice(), calc:true, examMin:60,
+var store = { view:"book", ch:"j1", bookView:"full", lec:"e1", slide:{e1:0,e2:0}, onlyCore:false, topics:TOPS.slice(), calc:true, examMin:30,
   quizView:"start", exam:null, stats:{}, scroll:{}, calcType:"sup", calcStats:{sup:{ok:0,n:0},grav:{ok:0,n:0}}, prKind:"all", prLen:20 };
 try{ var raw = localStorage.getItem(LS); if(raw){ var p = JSON.parse(raw); for(var k in p) store[k] = p[k]; } }catch(e){}
+store.examMin = 30;
 function save(){ try{ localStorage.setItem(LS, JSON.stringify(store)); }catch(e){} }
 
 function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -417,7 +418,7 @@ function grade(q, a, max){
   if(q.k === "s"){ var ok = a.v === q.a; return { p: ok ? max : 0, max:max, units:[ok] }; }
   if(q.k === "m"){
     var v = a.v || [], hits = v.filter(function(x){ return q.a.indexOf(x) >= 0; }).length, wr = v.length - hits;
-    return { p: max*Math.max(0, (hits - wr)/q.a.length), max:max, units:q.o.map(function(o,i){ return (v.indexOf(i)>=0) === (q.a.indexOf(i)>=0); }) };
+    return { p: max*hits/q.a.length, max:max, units:q.o.map(function(o,i){ return (v.indexOf(i)>=0) === (q.a.indexOf(i)>=0); }) };
   }
   if(q.k === "g"){
     var u = q.it.map(function(it, i){ return a.v && a.v[i] === it[1]; });
@@ -608,21 +609,18 @@ function renderQuiz(){
   return renderStart();
 }
 function renderStart(){
-  $rail.innerHTML = topicPicker("tp", true) +
-    '<div class="field"><span class="lbl">ZH időkeret</span><div class="seg" id="segMin">'+[[30,"30 p"],[45,"45 p"],[60,"60 p"],[90,"90 p"]].map(function(x){ return '<button data-v="'+x[0]+'" aria-pressed="'+(store.examMin===x[0])+'">'+x[1]+'</button>'; }).join("")+'</div>'+
-    '<p class="hint">A pontos időkeretet még nem tudjuk; állítsd be, amennyit gondolsz.</p></div>';
+  $rail.innerHTML = topicPicker("tp", true);
   $rail.style.overflow = "auto";
   wireTopics($rail, renderStart);
-  $rail.querySelectorAll("#segMin button").forEach(function(b){ b.onclick = function(){ store.examMin = +b.dataset.v; save(); renderStart(); }; });
   var L = learnState(), plan = examPlan();
-  $main.innerHTML = '<div class="head"><div><span class="eyebrow">1. ZH · 16 kérdés · 40 pont</span><h2>Gyakorlás</h2>'+
+  $main.innerHTML = '<div class="head"><div><span class="eyebrow">1. ZH · 16 kérdés · 40 pont · 30 perc</span><h2>Gyakorlás</h2>'+
     '<p>A próba-ZH ugyanúgy épül fel, mint az igazi: tesztkérdések, összetett kérdések és két számolás. A gyakorló módban kérdésenként rögtön látod a megoldást.</p></div></div>'+
     '<div class="result">'+
       '<div class="structure"><div><b>10 × teszt</b><span>14 pont · 6 egyválaszos (1 p) és 4 többválaszos (2 p)</span></div>'+
       '<div><b>4 × összetett</b><span>16 pont · csoportosítás, ábrakitöltés, felsorolás, esetfeladat (4 p)</span></div>'+
       '<div><b>2 × számolás</b><span>10 pont · beszállítóértékelés és gravitációs központ (5 p)</span></div></div>'+
       '<ul class="rules"><li>A visszaszámláló a jobb felső sarokban fut (<b>'+store.examMin+' perc</b>); ha lejár, a teszt automatikusan lezárul.</li>'+
-      '<li>A többválaszosnál a rossz jelölés levon: pont = (jó jelölések − rossz jelölések) / helyes válaszok száma.</li>'+
+      '<li>A többválaszosnál nincs pontlevonás: minden bejelölt helyes válasz arányos részpontot ér.</li>'+
       '<li>A szöveges válaszokat a gép elnézően ellenőrzi (ékezet, kötőjel, apró elírás nem számít). Ha mégis elutasít egy jó választ, a kiértékelésnél elfogadhatod.</li>'+
       '<li>Számolásnál 2%-os hibahatár, elég 2 tizedesjegy.</li></ul>'+
       (plan.total < 40 ? '<p class="hint" style="margin:-8px 0 16px">A kiválasztott témakörökből most '+plan.n+' kérdés, '+plan.total+' pont áll össze.</p>' : '')+
@@ -715,7 +713,7 @@ function qHead(q){
 /* ---- ZH ---- */
 var timerInt = null;
 function examActive(){ return !!(store.exam && !store.exam.done); }
-function examMs(){ return (store.exam && store.exam.min || 60) * 60000; }
+function examMs(){ return 30 * 60000; }
 function examLeft(){ return store.exam ? Math.max(0, store.exam.start + examMs() - Date.now()) : 0; }
 function fmt(ms){ var t = Math.ceil(ms/1000), m = Math.floor(t/60), s = t%60; return (m<10?"0":"")+m+":"+(s<10?"0":"")+s; }
 function examPlan(){
@@ -735,7 +733,7 @@ function startExam(){
     .concat(cx.map(function(q){ return { inst:instFor(q), sec:"complex", pts:4 }; }));
   if(store.calc){ items.push({ calc:genSup(false), sec:"calc", pts:5 }); items.push({ calc:genGrav(false), sec:"calc", pts:5 }); }
   if(!items.length) return;
-  store.exam = { start:Date.now(), min:store.examMin, items:items, ans:{}, i:0, done:false, end:null, filter:"all" };
+  store.exam = { start:Date.now(), min:30, items:items, ans:{}, i:0, done:false, end:null, filter:"all" };
   store.quizView = "exam"; save(); renderQuiz(); window.scrollTo(0,0);
 }
 function itemQ(it){ return it.calc ? { k:"calc", c:it.calc, t:"t8", q: it.calc.type === "sup" ? "Beszállítóértékelés – súlyozott pontrendszer" : "Telephelyválasztás – gravitációs központ" } : QBY[it.inst.id]; }
@@ -786,7 +784,7 @@ function askSubmit(){
 function renderExam(){
   var ex = store.exam;
   if(!ex){ store.quizView = "start"; return renderStart(); }
-  var head = '<div class="head"><div><span class="eyebrow">Próba-ZH · '+(ex.min||60)+' perc</span><h2>Próba-ZH</h2>'+
+  var head = '<div class="head"><div><span class="eyebrow">Próba-ZH · 30 perc</span><h2>Próba-ZH</h2>'+
     '<p>Mint az igazi: közben nincs visszajelzés, a végén látod, mi lett jó és mi nem.</p></div></div>';
   if(ex.done) return renderExamResult(head);
   railExam(); ensureTimer();
