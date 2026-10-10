@@ -230,7 +230,7 @@ function gravLayout(pts, unit, D){
   pts.forEach(function(p){ vmax = Math.max(vmax, p[3]); vmin = Math.min(vmin, p[3]); });
   var circ = pts.map(function(p){
     var k = vmax > vmin ? (p[3]-vmin)/(vmax-vmin) : .5;
-    return { p:p, cx:G.sx(p[1]), cy:G.sy(p[2]), r: 9 + 5*k };
+    return { p:p, cx:G.sx(p[1]), cy:G.sy(p[2]), r: 11 };
   });
   var boxes = circ.map(function(c){ return { x0:c.cx-c.r-3, x1:c.cx+c.r+3, y0:c.cy-c.r-3, y1:c.cy+c.r+3 }; });
   if(D){ var dx = G.sx(D[0]), dy = G.sy(D[1]); boxes.push({ x0:dx-14, x1:dx+14, y0:dy-14, y1:dy+14 }); boxes.push({ x0:dx+16, x1:dx+130, y0:dy+6, y1:dy+26 }); }
@@ -286,6 +286,6 @@ window.FIGCAP = {
   updown:"Az ellátási lánc részei: beszállítói és vevői oldal.",
   codp:"CODP szerinti vállalattípusok – a háromszög a szétkapcsolási pont.",
   bullwhip:"Ostorcsapás-hatás: a lánc elején a legnagyobb a kilengés.",
-  gravity:"A mintafeladat üzletei és a D raktár helye. A kör mérete a forgalommal arányos."
+  gravity:"A mintafeladat üzletei és a D raktár helye. A forgalom a felirat végén olvasható."
 };
 })();
