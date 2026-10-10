@@ -216,7 +216,8 @@ FIG.bullwhip = function(B){
   return svg(720,286,b,"Ostorcsapás-hatás");
 };
 
-FIG.gravity = function(B, data){
+FIG.gravity = function(B, data, unit){
+  unit = unit || "db";
   var pts = data || [["A",150,75,6000],["B",100,300,8200],["C",275,380,7000]], D = data ? null : [171.93,262.74];
   var mx = 400, my = 400; pts.forEach(function(p){ mx = Math.max(mx, p[1]+50); my = Math.max(my, p[2]+50); });
   mx = Math.ceil(mx/100)*100; my = Math.ceil(my/100)*100;
@@ -225,10 +226,19 @@ FIG.gravity = function(B, data){
   for(var g=0; g<=mx; g+=100){ b += '<line x1="'+sx(g)+'" y1="'+sy(0)+'" x2="'+sx(g)+'" y2="'+sy(my)+'" class="fx-grid"/>'+lines(sx(g),oy+16,g,"fx-s"); }
   for(var h=100; h<=my; h+=100){ b += '<line x1="'+sx(0)+'" y1="'+sy(h)+'" x2="'+sx(mx)+'" y2="'+sy(h)+'" class="fx-grid"/>'+lines(ox-10,sy(h),h,"fx-s","end"); }
   var vmax = 0; pts.forEach(function(p){ vmax = Math.max(vmax, p[3]); });
+  var placed = [];
   pts.forEach(function(p){
-    var r = 8 + 16*Math.sqrt(p[3]/vmax);
-    b += '<circle cx="'+sx(p[1])+'" cy="'+sy(p[2])+'" r="'+r+'" class="fx-hi"/>'+lines(sx(p[1]),sy(p[2]),p[0],"fx-at");
-    b += lines(sx(p[1])+r+6,sy(p[2])-2,"["+p[1]+"; "+p[2]+"] · "+p[3]+" db","fx-s","start");
+    var r = 8 + 16*Math.sqrt(p[3]/vmax), cx = sx(p[1]), cy = sy(p[2]);
+    b += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" class="fx-hi"/>'+lines(cx,cy,p[0],"fx-at");
+    var txt = "["+p[1]+"; "+p[2]+"] · "+String(p[3]).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" "+unit, tw = txt.length*7.2;
+    var right = cx + r + 6 + tw <= 630, x0 = right ? cx + r + 6 : cx - r - 6 - tw, ly = cy;
+    /* ütközés esetén lejjebb/feljebb tolás */
+    for(var k=0;k<8;k++){
+      var hit = placed.some(function(q){ return Math.abs(q.y - ly) < 18 && x0 < q.x1 && x0 + tw > q.x0; });
+      if(!hit) break; ly = cy + (k%2 ? -1 : 1) * 20 * Math.ceil((k+1)/2);
+    }
+    placed.push({x0:x0, x1:x0+tw, y:ly});
+    b += lines(right ? x0 : x0 + tw, ly, txt, "fx-s", right ? "start" : "end");
   });
   if(D){ b += '<path d="'+star(sx(D[0]),sy(D[1]),13)+'" class="fx-dark"/>'+lines(sx(D[0])+18,sy(D[1])+16,"D ≈ [172; 263]","fx-at","start"); }
   return svg(640,410,b,"Gravitációs központ");

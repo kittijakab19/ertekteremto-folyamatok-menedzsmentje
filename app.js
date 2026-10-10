@@ -43,7 +43,7 @@ zoom.onclick = function(){ zoom.hidden = true; };
 function openZoom(src){ document.getElementById("zoomImg").src = src; zoom.hidden = false; }
 function slideSrc(id){ return "slides/" + id + ".jpg"; }
 function slideName(id){ var m = /^e(\d)-(\d+)$/.exec(id); return m ? m[1] + ". ea · " + (+m[2]) + ". dia" : id; }
-function figHtml(name, B, data){ return FIG[name] ? '<div class="dg">' + FIG[name](B || null, data) + '</div>' : ""; }
+function figHtml(name, B, data, extra){ return FIG[name] ? '<div class="dg">' + FIG[name](B || null, data, extra) + '</div>' : ""; }
 
 /* ---------- nav ---------- */
 function setView(v){ store.view = v; save(); render(); window.scrollTo(0,0); }
@@ -259,7 +259,12 @@ function genGrav(sample){
   if(sample) d = { unit:"db", pts:[["A",150,75,6000],["B",100,300,8200],["C",275,380,7000]] };
   else {
     var n = pick([3,3,4]); d = { unit:pick(["db","db","tonna"]), pts:[] };
-    for(var i=0;i<n;i++) d.pts.push([LET[i], rnd(20,480,5), rnd(20,480,5), rnd(10,120)*100]);
+    for(var i=0;i<n;i++){
+      var p, tries = 0;
+      do { p = [LET[i], rnd(20,480,5), rnd(20,480,5), rnd(10,120)*100]; tries++; }
+      while(tries < 200 && d.pts.some(function(q){ return Math.hypot(q[1]-p[1], q[2]-p[2]) < 110; }));
+      d.pts.push(p);
+    }
   }
   var sv = 0, sx = 0, sy = 0;
   d.pts.forEach(function(p){ sv += p[3]; sx += p[3]*p[1]; sy += p[3]*p[2]; });
@@ -637,7 +642,7 @@ function calcMain(cs, c, fs, title){
   $main.innerHTML = '<div class="head"><div><span class="eyebrow">Számolás · 2 feladat a ZH-n, 10 pont</span><h2>Számolás</h2>'+
     '<p>Minden kattintásra új adatsor. Töltsd ki a részeredményeket, ellenőrizd, és nézd meg a levezetést. A ZH-n a részszámításokért külön pont jár.</p></div></div>'+
     '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span><h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c)+
-    (c.type === "grav" ? '<div class="fillfig gravfig" style="margin-top:4px">'+figHtml("gravity", null, c.d.pts.map(function(p){ return [p[0],p[1],p[2],p[3]]; }))+'</div>' : "")+
+    (c.type === "grav" ? '<div class="fillfig gravfig" style="margin-top:4px">'+figHtml("gravity", null, c.d.pts.map(function(p){ return [p[0],p[1],p[2],p[3]]; }), c.d.unit)+'</div>' : "")+
     '<div class="calcgrid" id="cgrid">'+grouped+'</div>'+
     (cs.checked ? '<div class="fb"><div class="verdict '+(nOk===fs.length?"ok":nOk?"half":"no")+'"><span class="m"><span>'+(nOk===fs.length?"✓":"!")+'</span></span>'+nOk+' / '+fs.length+' részeredmény helyes</div></div>' : "")+
     '<div class="fbrow" style="margin-top:18px;justify-content:flex-start"><button class="btn primary" id="cCheck">Ellenőrzés</button><button class="btn" id="cSteps">'+(cs.steps?"Levezetés elrejtése":"Megoldás lépésenként")+'</button><button class="btn ghost" id="cNew2">Új adatok →</button>'+((store.calcHist||[]).some(function(e){ return e.id === cs.id; }) ? '<span class="kbd">✓ mentve a megoldott feladataim közé</span>' : '')+'</div>'+
