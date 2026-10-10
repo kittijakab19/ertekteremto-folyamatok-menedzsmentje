@@ -265,6 +265,8 @@ function genGrav(sample){
       while(tries < 200 && d.pts.some(function(q){ return Math.hypot(q[1]-p[1], q[2]-p[2]) < 110; }));
       d.pts.push(p);
     }
+    if(window.FIG && FIG.gravFits && !FIG.gravFits(d.pts, d.unit) && (genGrav.depth = (genGrav.depth||0) + 1) < 50){ var again = genGrav(false); genGrav.depth = 0; return again; }
+    genGrav.depth = 0;
   }
   var sv = 0, sx = 0, sy = 0;
   d.pts.forEach(function(p){ sv += p[3]; sx += p[3]*p[1]; sy += p[3]*p[2]; });
@@ -579,10 +581,10 @@ function renderCalcHist(){
   $main.innerHTML = '<div class="head"><div><span class="eyebrow">Számolás · előzmények</span><h2>Megoldott feladataim</h2>'+
     '<p>Minden ellenőrzött feladat ide kerül, ugyanazokkal a számokkal és a te válaszaiddal. Megnyithatod a válaszaiddal és a levezetéssel, vagy újra megoldhatod üresen.</p></div>'+
     '<button class="btn" id="hBack">← Vissza a számoláshoz</button></div>'+
-    '<div class="rfilter" style="margin-top:0">'+[["all","Mind ("+h.length+")"],["sup","Beszállítóértékelés"],["grav","Gravitációs központ"]].map(function(x){ return '<button class="chtab" data-hf="'+x[0]+'" aria-pressed="'+(f===x[0])+'">'+x[1]+'</button>'; }).join("")+'</div>'+
+    '<div class="rfilter" style="margin-top:0">'+[["all","Mind ("+h.length+")"],["sup","Beszállítóértékelés"],["grav","Telephelyválasztás"]].map(function(x){ return '<button class="chtab" data-hf="'+x[0]+'" aria-pressed="'+(f===x[0])+'">'+x[1]+'</button>'; }).join("")+'</div>'+
     '<div class="review">'+(shown.length ? shown.map(function(e){
       var v = e.ok === e.n ? "ok" : e.ok ? "half" : "no", dt = new Date(e.ts);
-      return '<article class="rv '+v+'" data-src="t8"><div class="rvhead"><span class="chip src">'+(e.c.type === "sup" ? "Beszállítóértékelés" : "Gravitációs központ")+'</span>'+(e.sample ? '<span class="chip">mintafeladat</span>' : '')+
+      return '<article class="rv '+v+'" data-src="t8"><div class="rvhead"><span class="chip src">'+(e.c.type === "sup" ? "Beszállítóértékelés" : "Telephelyválasztás")+'</span>'+(e.sample ? '<span class="chip">mintafeladat</span>' : '')+
         '<span class="kbd">'+dt.toLocaleDateString("hu-HU")+' '+dt.toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit"})+'</span>'+
         '<span class="rvst '+v+'">'+e.ok+' / '+e.n+' helyes</span></div>'+
         '<p style="margin:0;color:var(--ink-2);font-size:14px">'+esc(histSummary(e.c))+'</p>'+
@@ -959,6 +961,6 @@ function drawList(){
   document.getElementById("qal").innerHTML = html || '<p class="empty">Nincs találat.</p>';
 }
 
-window.ETFM = { textOk:textOk, numOk:numOk };
+window.ETFM = { textOk:textOk, numOk:numOk, genGrav:genGrav, genSup:genSup, calcSteps:calcSteps, calcText:calcText };
 render();
 })();

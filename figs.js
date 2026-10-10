@@ -216,31 +216,57 @@ FIG.bullwhip = function(B){
   return svg(720,286,b,"Ostorcsapás-hatás");
 };
 
-FIG.gravity = function(B, data, unit){
-  unit = unit || "db";
-  var pts = data || [["A",150,75,6000],["B",100,300,8200],["C",275,380,7000]], D = data ? null : [171.93,262.74];
+/* gravitációs ábra: kis körök, a feliratok helyét ütközésvizsgálattal választjuk */
+function gravGeom(pts, D){
   var mx = 400, my = 400; pts.forEach(function(p){ mx = Math.max(mx, p[1]+50); my = Math.max(my, p[2]+50); });
   mx = Math.ceil(mx/100)*100; my = Math.ceil(my/100)*100;
-  var W = 520, H = 360, ox = 60, oy = 380, sx = function(v){ return ox + v/mx*W; }, sy = function(v){ return oy - v/my*H; };
-  var b = '';
-  for(var g=0; g<=mx; g+=100){ b += '<line x1="'+sx(g)+'" y1="'+sy(0)+'" x2="'+sx(g)+'" y2="'+sy(my)+'" class="fx-grid"/>'+lines(sx(g),oy+16,g,"fx-s"); }
-  for(var h=100; h<=my; h+=100){ b += '<line x1="'+sx(0)+'" y1="'+sy(h)+'" x2="'+sx(mx)+'" y2="'+sy(h)+'" class="fx-grid"/>'+lines(ox-10,sy(h),h,"fx-s","end"); }
-  var vmax = 0; pts.forEach(function(p){ vmax = Math.max(vmax, p[3]); });
-  var placed = [];
-  pts.forEach(function(p){
-    var r = 8 + 16*Math.sqrt(p[3]/vmax), cx = sx(p[1]), cy = sy(p[2]);
-    b += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" class="fx-hi"/>'+lines(cx,cy,p[0],"fx-at");
-    var txt = "["+p[1]+"; "+p[2]+"] · "+String(p[3]).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" "+unit, tw = txt.length*7.8;
-    var right = cx + r + 6 + tw <= 612, x0 = right ? cx + r + 6 : cx - r - 6 - tw, ly = cy;
-    /* ütközés esetén lejjebb/feljebb tolás */
-    for(var k=0;k<8;k++){
-      var hit = placed.some(function(q){ return Math.abs(q.y - ly) < 18 && x0 < q.x1 && x0 + tw > q.x0; });
-      if(!hit) break; ly = cy + (k%2 ? -1 : 1) * 20 * Math.ceil((k+1)/2);
-    }
-    placed.push({x0:x0, x1:x0+tw, y:ly});
-    b += lines(right ? x0 : x0 + tw, ly, txt, "fx-s", right ? "start" : "end");
+  var W = 520, H = 360, ox = 60, oy = 380;
+  return { mx:mx, my:my, ox:ox, oy:oy, W:W, H:H, sx:function(v){ return ox + v/mx*W; }, sy:function(v){ return oy - v/my*H; } };
+}
+function gravLabel(p, unit){ return "["+p[1]+"; "+p[2]+"] · "+String(p[3]).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" "+unit; }
+function gravLayout(pts, unit, D){
+  unit = unit || "db";
+  var G = gravGeom(pts, D), vmax = 0, vmin = Infinity;
+  pts.forEach(function(p){ vmax = Math.max(vmax, p[3]); vmin = Math.min(vmin, p[3]); });
+  var circ = pts.map(function(p){
+    var k = vmax > vmin ? (p[3]-vmin)/(vmax-vmin) : .5;
+    return { p:p, cx:G.sx(p[1]), cy:G.sy(p[2]), r: 9 + 5*k };
   });
-  if(D){ b += '<path d="'+star(sx(D[0]),sy(D[1]),13)+'" class="fx-dark"/>'+lines(sx(D[0])+18,sy(D[1])+16,"D ≈ [172; 263]","fx-at","start"); }
+  var boxes = circ.map(function(c){ return { x0:c.cx-c.r-3, x1:c.cx+c.r+3, y0:c.cy-c.r-3, y1:c.cy+c.r+3 }; });
+  if(D){ var dx = G.sx(D[0]), dy = G.sy(D[1]); boxes.push({ x0:dx-14, x1:dx+14, y0:dy-14, y1:dy+14 }); boxes.push({ x0:dx+16, x1:dx+130, y0:dy+6, y1:dy+26 }); }
+  var ok = true, out = [];
+  circ.forEach(function(c){
+    var txt = gravLabel(c.p, unit), tw = txt.length*7.4, th = 16, g = 6, r = c.r;
+    var cand = [
+      [c.cx+r+g, c.cy-th/2, "start"], [c.cx-r-g-tw, c.cy-th/2, "end"],
+      [c.cx-tw/2, c.cy-r-g-th, "middle"], [c.cx-tw/2, c.cy+r+g, "middle"],
+      [c.cx+r*.7, c.cy-r-th-2, "start"], [c.cx+r*.7, c.cy+r+2, "start"],
+      [c.cx-r*.7-tw, c.cy-r-th-2, "end"], [c.cx-r*.7-tw, c.cy+r+2, "end"]
+    ];
+    var best = null, bestHit = Infinity;
+    cand.forEach(function(k){
+      var bx = { x0:k[0], x1:k[0]+tw, y0:k[1], y1:k[1]+th }, hit = 0;
+      if(bx.x0 < 4 || bx.x1 > 636 || bx.y0 < 4 || bx.y1 > G.oy - 2) hit += 1000;
+      boxes.forEach(function(o){ var w = Math.min(bx.x1,o.x1) - Math.max(bx.x0,o.x0), h = Math.min(bx.y1,o.y1) - Math.max(bx.y0,o.y0); if(w > 0 && h > 0) hit += w*h; });
+      if(hit < bestHit){ bestHit = hit; best = { bx:bx, k:k }; }
+    });
+    if(bestHit > 0) ok = false;
+    boxes.push(best.bx);
+    var ax = best.k[2] === "start" ? best.bx.x0 : best.k[2] === "end" ? best.bx.x1 : (best.bx.x0+best.bx.x1)/2;
+    out.push({ c:c, txt:txt, x:ax, y:best.bx.y0+th/2, anchor:best.k[2] });
+  });
+  return { ok:ok, G:G, items:out };
+}
+FIG.gravFits = function(pts, unit){ return gravLayout(pts, unit, null).ok; };
+FIG.gravity = function(B, data, unit){
+  var pts = data || [["A",150,75,6000],["B",100,300,8200],["C",275,380,7000]], D = data ? null : [171.93,262.74];
+  var L = gravLayout(pts, unit, D), G = L.G, b = '';
+  for(var g=0; g<=G.mx; g+=100){ b += '<line x1="'+G.sx(g)+'" y1="'+G.sy(0)+'" x2="'+G.sx(g)+'" y2="'+G.sy(G.my)+'" class="fx-grid"/>'+lines(G.sx(g),G.oy+16,g,"fx-s"); }
+  for(var h=100; h<=G.my; h+=100){ b += '<line x1="'+G.sx(0)+'" y1="'+G.sy(h)+'" x2="'+G.sx(G.mx)+'" y2="'+G.sy(h)+'" class="fx-grid"/>'+lines(G.ox-10,G.sy(h),h,"fx-s","end"); }
+  L.items.forEach(function(it){ var c = it.c;
+    b += '<circle cx="'+c.cx+'" cy="'+c.cy+'" r="'+c.r+'" class="fx-hi"/>'+'<text x="'+c.cx+'" y="'+c.cy+'" class="fx-at" text-anchor="middle" dy="0.35em" style="font-size:12px">'+esc(c.p[0])+'</text>'; });
+  L.items.forEach(function(it){ b += lines(it.x, it.y, it.txt, "fx-s", it.anchor); });
+  if(D){ b += '<path d="'+star(G.sx(D[0]),G.sy(D[1]),13)+'" class="fx-dark"/>'+lines(G.sx(D[0])+18,G.sy(D[1])+16,"D ≈ [172; 263]","fx-at","start"); }
   return svg(640,410,b,"Gravitációs központ");
 };
 function star(cx,cy,r){ var d=""; for(var i=0;i<10;i++){ var a=Math.PI/5*i-Math.PI/2, rr=i%2?r*.45:r; d+=(i?"L":"M")+(cx+rr*Math.cos(a)).toFixed(1)+","+(cy+rr*Math.sin(a)).toFixed(1); } return d+"Z"; }
