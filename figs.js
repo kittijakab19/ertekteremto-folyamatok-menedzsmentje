@@ -4,11 +4,11 @@
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function lines(x, y, txt, cls, anchor, lh){
   var ls = String(txt).split("|"), h = lh || 17, y0 = y - (ls.length-1)*h/2;
-  return '<text x="'+x+'" y="'+y0+'" class="'+cls+'" text-anchor="'+(anchor||"middle")+'" dominant-baseline="middle">'+
-    ls.map(function(l,i){ return '<tspan x="'+x+'" dy="'+(i?h:0)+'">'+esc(l)+'</tspan>'; }).join("")+'</text>';
+  return '<text x="'+x+'" y="'+y0+'" class="'+cls+'" text-anchor="'+(anchor||"middle")+'">'+
+    ls.map(function(l,i){ return '<tspan x="'+x+'" dy="'+(i?h:"0.35em")+'">'+esc(l)+'</tspan>'; }).join("")+'</text>';
 }
 function badge(x, y, n){
-  return '<g class="fx-badge"><circle cx="'+x+'" cy="'+y+'" r="14"/><text x="'+x+'" y="'+(y+.5)+'" text-anchor="middle" dominant-baseline="middle">'+n+'</text></g>';
+  return '<g class="fx-badge"><circle cx="'+x+'" cy="'+y+'" r="14"/><text x="'+x+'" y="'+y+'" text-anchor="middle" dy="0.35em">'+n+'</text></g>';
 }
 /* felirat vagy üres mező egy téglalapban */
 function slot(B, key, x, y, w, h, label, cls, tcls){
@@ -120,9 +120,9 @@ FIG.porter = function(B){
   if(B && B.haszon != null) b += '<rect x="640" y="160" width="80" height="72" rx="7" class="fx-blank"/>'+badge(680,196,B.haszon);
   else b += lines(676,196,"Érték|/|Haszon","fx-on",null,19);
   if(B && B.tam != null) b += '<rect x="8" y="16" width="44" height="178" rx="7" class="fx-blank"/>'+badge(30,105,B.tam);
-  else b += '<text x="30" y="105" class="fx-s" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 30 105)">Támogató tevékenységek</text>';
+  else b += '<text x="30" y="105" class="fx-s" text-anchor="middle" dy="0.35em" transform="rotate(-90 30 105)">Támogató tevékenységek</text>';
   if(B && B.els != null) b += '<rect x="8" y="206" width="44" height="170" rx="7" class="fx-blank"/>'+badge(30,291,B.els);
-  else b += '<text x="30" y="291" class="fx-s" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 30 291)">Elsődleges tevékenységek</text>';
+  else b += '<text x="30" y="291" class="fx-s" text-anchor="middle" dy="0.35em" transform="rotate(-90 30 291)">Elsődleges tevékenységek</text>';
   return svg(760,392,b,"Porter értéklánca");
 };
 
@@ -167,7 +167,7 @@ FIG.kraljic = function(B){
   b += slot(B,"q3",120,200,230,140,"Nem kritikus termék");
   b += slot(B,"q4",370,200,230,140,"Befolyásolható|termék","fx-sand");
   if(B && B.ay != null) b += '<rect x="20" y="70" width="56" height="240" rx="7" class="fx-blank"/>'+badge(48,190,B.ay);
-  else b += '<text x="58" y="195" class="fx-t" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 58 195)">Beszerzés piaci komplexitása</text>';
+  else b += '<text x="58" y="195" class="fx-t" text-anchor="middle" dy="0.35em" transform="rotate(-90 58 195)">Beszerzés piaci komplexitása</text>';
   b += label(B,"ax",250,382,220,36,"Termék fontossága","fx-t");
   b += lines(108,388,"alacsony","fx-s","start"); b += lines(612,356,"magas","fx-s","end");
   return svg(640,424,b,"Kraljic-mátrix");
@@ -230,8 +230,8 @@ FIG.gravity = function(B, data, unit){
   pts.forEach(function(p){
     var r = 8 + 16*Math.sqrt(p[3]/vmax), cx = sx(p[1]), cy = sy(p[2]);
     b += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" class="fx-hi"/>'+lines(cx,cy,p[0],"fx-at");
-    var txt = "["+p[1]+"; "+p[2]+"] · "+String(p[3]).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" "+unit, tw = txt.length*7.2;
-    var right = cx + r + 6 + tw <= 630, x0 = right ? cx + r + 6 : cx - r - 6 - tw, ly = cy;
+    var txt = "["+p[1]+"; "+p[2]+"] · "+String(p[3]).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" "+unit, tw = txt.length*7.8;
+    var right = cx + r + 6 + tw <= 612, x0 = right ? cx + r + 6 : cx - r - 6 - tw, ly = cy;
     /* ütközés esetén lejjebb/feljebb tolás */
     for(var k=0;k<8;k++){
       var hit = placed.some(function(q){ return Math.abs(q.y - ly) < 18 && x0 < q.x1 && x0 + tw > q.x0; });
