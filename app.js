@@ -273,15 +273,27 @@ function genGrav(sample){
   return { type:"grav", d:d, r:{ sv:sv, sx:sx, sy:sy, x:sx/sv, y:sy/sv } };
 }
 function wfmt(w){ return hu(w,1); }
-function calcText(c){
+function ranksOf(r){ return r.rank || r.tot.map(function(t){ return 1 + r.tot.filter(function(x){ return x > t + 1e-9; }).length; }); }
+function fieldOk(f, val){ return f[4] === "rank" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2]); }
+/* v: válaszok (ha van, a táblázatban sorrend-oszlop is megjelenik); st: ellenőrzés után kulcs → helyes-e; ro: csak olvasható */
+function calcText(c, v, st, ro){
   var d = c.d;
   if(c.type === "sup"){
     return '<p>Egy vállalat beszállítót választ egy termékhez. Az értékelés két szempontot vet össze: a termék <b>árát</b> (súlya <b>'+wfmt(d.wP)+'</b>) és a <b>szállítási határidőt</b> (súlya <b>'+wfmt(d.wD)+'</b>). A minőségi megfelelést előminősítéssel már ellenőrizték.</p>'+
       '<ul><li>A terméket az értékeléstől számított <b>'+d.week+'. héttől</b> tervezik felhasználni; minden késő hétért <b>'+d.pen+' büntetőpontot</b> számolnak el.</li>'+
       '<li>A beszerzési ár minimuma <b>'+hu(d.min,0)+' euró</b>; a magasabb árért <b>'+d.step+' eurónként 1 pontot</b> vonnak le.</li>'+
       '<li>Mindkét szempont mentén legfeljebb <b>100 pont</b> érhető el.</li></ul>'+
-      '<div class="tw"><table><tr><th>Beszállító</th><th>Ár (euró)</th><th>Szállítás (hét)</th></tr>'+
-      d.sup.map(function(s,i){ return '<tr><td><b>'+LET[i]+'</b></td><td class="num">'+hu(s[0],0)+'</td><td class="num">'+s[1]+'</td></tr>'; }).join("")+'</table></div>';
+      '<div class="tw"><table><tr><th>Beszállító</th><th>Ár (euró)</th><th>Szállítás (hét)</th>'+(v ? '<th>Sorrend <span class="kbd" style="font-weight:500">(1. = legjobb)</span></th>' : '')+'</tr>'+
+      d.sup.map(function(s,i){
+        var cell = "";
+        if(v){
+          var key = "r"+i, val = v[key], rk = ranksOf(c.r)[i], has = st && key in st, ok = has && st[key];
+          if(ro) cell = '<span class="num" style="font-weight:700">'+(val === "" || val == null ? "<i>üres</i>" : (+val)+".")+'</span>';
+          else cell = '<select class="ranksel" data-act="txt" data-p="" data-f="'+key+'"><option value="">–</option>'+d.sup.map(function(x,j){ return '<option value="'+(j+1)+'"'+(String(val)===String(j+1)?" selected":"")+'>'+(j+1)+'.</option>'; }).join("")+'</select>';
+          if(has) cell += ' <span class="rkst '+(ok?"ok":"no")+'">'+(ok ? "✓" : "✕ helyesen: "+rk+".")+'</span>';
+          cell = '<td class="rkcell'+(has ? (ok ? " ok" : " no") : "")+'">'+cell+'</td>';
+        }
+        return '<tr><td><b>'+LET[i]+'</b></td><td class="num">'+hu(s[0],0)+'</td><td class="num">'+s[1]+'</td>'+cell+'</tr>'; }).join("")+'</table></div>';
   }
   return '<p>Egy vállalat egy termékét '+d.pts.length+' üzletében értékesíti. A vezetés úgy döntött, hogy az üzleteket ezentúl egy új raktárból (<b>R</b>) látja el. A <b>gravitációs központ módszerével</b> határozd meg, hova érdemes telepíteni a raktárat!</p>'+
     '<div class="tw"><table><tr><th>Üzlet</th><th>X koordináta</th><th>Y koordináta</th><th>Éves értékesítés ('+d.unit+')</th></tr>'+
@@ -295,7 +307,8 @@ function calcFields(c, full){
       if(full){ f.push(["p"+i, LET[i]+" · árpontszám", r.pp[i], 1, "num"]); f.push(["d"+i, LET[i]+" · szállítási pontszám", r.dp[i], 1, "num"]); }
       f.push(["t"+i, LET[i]+" · súlyozott összpontszám", r.tot[i], 1, "num"]);
     });
-    f.push(["best", "Melyik beszállítót érdemes választani?", r.best, 1, "sel"]);
+    var rk = ranksOf(r);
+    c.d.sup.forEach(function(s,i){ f.push(["r"+i, LET[i]+" · sorrend", rk[i], full ? 1 : 0.25, "rank"]); });
   } else {
     f.push(["sv", "A súlyszámok (értékesítés) összege", r.sv, 1, "num"]);
     if(full){ f.push(["sx", "Σ (értékesítés × X)", r.sx, 1, "num"]); f.push(["sy", "Σ (értékesítés × Y)", r.sy, 1, "num"]); }
@@ -311,7 +324,7 @@ function calcSteps(c){
       '<li><div class="tw"><table><tr><th></th><th>Árpontszám</th><th>Késés</th><th>Szállítási pontszám</th><th>Összpont = '+wfmt(d.wP)+'×ár + '+wfmt(d.wD)+'×száll.</th></tr>'+
       d.sup.map(function(s,i){ var late = Math.max(0, s[1]-d.week);
         return '<tr><td><b>'+LET[i]+'</b></td><td class="num">100 − '+hu(s[0]-d.min,0)+'/'+d.step+' = <b>'+hu(r.pp[i])+'</b></td><td class="num">'+late+' hét</td><td class="num">100 − '+late+'×'+d.pen+' = <b>'+hu(r.dp[i])+'</b></td><td class="num">'+wfmt(d.wP)+'×'+hu(r.pp[i])+' + '+wfmt(d.wD)+'×'+hu(r.dp[i])+' = <b>'+hu(r.tot[i])+'</b></td></tr>'; }).join("")+
-      '</table></div></li><li>A legmagasabb összpontszám: <b>'+LET[r.best]+' ('+hu(r.tot[r.best])+' pont)</b>, ezt a beszállítót érdemes választani.</li></ol>';
+      '</table></div></li><li><b>Sorrend</b> (a legnagyobb összpontszám az 1.): '+range(d.sup.length).sort(function(a,b){ return r.tot[b] - r.tot[a]; }).map(function(i,k){ return '<b>'+(k+1)+'. '+LET[i]+'</b> ('+hu(r.tot[i])+')'; }).join(" · ")+'. Az 1. helyezettet, <b>'+LET[r.best]+'</b>-t érdemes választani.</li></ol>';
   }
   return '<ol><li>Súlyszámok összege: '+d.pts.map(function(p){ return hu(p[3],0); }).join(" + ")+' = <b>'+hu(r.sv,0)+'</b></li>'+
     '<li>Σ V·x = '+d.pts.map(function(p){ return hu(p[3],0)+'×'+p[1]; }).join(" + ")+' = <b>'+hu(r.sx,0)+'</b></li>'+
@@ -388,7 +401,7 @@ function qBodyHtml(q, inst, a, pfx){
   if(q.k === "calc"){
     a.v = a.v || {};
     var fs = calcFields(q.c, false);
-    return '<div class="task" style="box-shadow:none;margin-top:16px;padding:18px 18px">'+calcText(q.c)+'</div><div class="calcgrid">'+fs.map(function(f){ return calcInput(f, a.v[f[0]], q.c); }).join("")+'</div>';
+    return '<div class="task" style="box-shadow:none;margin-top:16px;padding:18px 18px">'+calcText(q.c, q.c.type === "sup" ? a.v : null)+'</div><div class="calcgrid">'+fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f){ return calcInput(f, a.v[f[0]], q.c); }).join("")+'</div>';
   }
   return "";
 }
@@ -452,7 +465,7 @@ function grade(q, a, max){
   }
   if(q.k === "calc"){
     var fs = calcFields(q.c, false), sum = 0, mx = 0, cu = {};
-    fs.forEach(function(f){ var val = a.v && a.v[f[0]], ok = f[4] === "sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2]); cu[f[0]] = ok; mx += f[3]; if(ok) sum += f[3]; });
+    fs.forEach(function(f){ var val = a.v && a.v[f[0]], ok = fieldOk(f, val); cu[f[0]] = ok; mx += f[3]; if(ok) sum += f[3]; });
     return { p: sum*max/mx, max:max, fields:cu };
   }
   return { p:0, max:max };
@@ -499,10 +512,9 @@ function reviewBody(q, inst, a, g, pfx, ovrOn){
   }
   if(q.k === "calc"){
     var fs = calcFields(q.c, false);
-    return '<div class="task" style="box-shadow:none;padding:18px">'+calcText(q.c)+'</div><div class="calcgrid">'+fs.map(function(f){
+    return '<div class="task" style="box-shadow:none;padding:18px">'+calcText(q.c, q.c.type === "sup" ? (a.v || {}) : null, g.fields, true)+'</div><div class="calcgrid">'+fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f){
       var ok = g.fields[f[0]], val = a.v && a.v[f[0]];
-      var exp = f[4] === "sel" ? LET[f[2]] : hu(f[2]);
-      return '<div class="calcrow '+(ok?"ok":"no")+'"><label>'+esc(f[1])+'<small>'+f[3]+' pont</small></label><span class="num" style="font-weight:600">'+(val == null || val === "" ? "<i>üres</i>" : esc(f[4]==="sel" ? LET[+val] : val))+'</span><span class="st">'+(ok ? "✓ helyes" : "✕ "+exp)+'</span></div>';
+      return '<div class="calcrow '+(ok?"ok":"no")+'"><label>'+esc(f[1])+'<small>'+f[3]+' pont</small></label><span class="num" style="font-weight:600">'+(val == null || val === "" ? "<i>üres</i>" : esc(val))+'</span><span class="st">'+(ok ? "✓ helyes" : "✕ "+hu(f[2]))+'</span></div>';
     }).join("")+'</div><div class="steps"><span class="lbl">Megoldás lépésenként</span>'+calcSteps(q.c)+'</div>';
   }
   return "";
@@ -561,7 +573,7 @@ function newCalc(sample){
 }
 function calcScore(c, v){
   var fs = calcFields(c, true), n = 0;
-  fs.forEach(function(f){ var val = v[f[0]]; if(f[4]==="sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2])) n++; });
+  fs.forEach(function(f){ if(fieldOk(f, v[f[0]])) n++; });
   return { ok:n, n:fs.length };
 }
 function saveHist(cs){
@@ -630,30 +642,31 @@ function railCalc(){
   document.getElementById("cHist").onclick = function(){ store.calcView = "hist"; save(); renderCalc(); window.scrollTo(0,0); };
 }
 function calcMain(cs, c, fs, title){
-  var rows = fs.map(function(f){
+  var st = null; if(cs.checked){ st = {}; fs.forEach(function(f){ st[f[0]] = fieldOk(f, cs.v[f[0]]); }); }
+  var rows = fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f){
     var state = null;
-    if(cs.checked){ var val = cs.v[f[0]], ok = f[4] === "sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2]);
-      state = { cls: ok ? "ok" : "no", txt: ok ? "✓ helyes" : "✕ " + (f[4]==="sel" ? LET[f[2]] : hu(f[2])) }; }
+    if(cs.checked){ var ok = st[f[0]];
+      state = { cls: ok ? "ok" : "no", txt: ok ? "✓ helyes" : "✕ " + hu(f[2]) }; }
     return calcInput(f, cs.v[f[0]], c, state);
   });
   var grouped = "";
   if(c.type === "sup"){
-    var per = 3; grouped = c.d.sup.map(function(s,i){ return '<div class="calchead">'+LET[i]+' beszállító</div>'+rows.slice(i*per, i*per+per).join(""); }).join("")+'<div class="calchead">Döntés</div>'+rows[rows.length-1];
+    var per = 3; grouped = c.d.sup.map(function(s,i){ return '<div class="calchead">'+LET[i]+' beszállító</div>'+rows.slice(i*per, i*per+per).join(""); }).join("");
   } else grouped = rows.join("");
-  var nOk = 0; if(cs.checked) fs.forEach(function(f){ var val = cs.v[f[0]]; if(f[4]==="sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2])) nOk++; });
+  var nOk = 0; if(cs.checked) fs.forEach(function(f){ if(st[f[0]]) nOk++; });
   $main.innerHTML = '<div class="head"><div><span class="eyebrow">Számolás · 2 feladat a ZH-n, 10 pont</span><h2>Számolás</h2>'+
     '<p>Minden kattintásra új adatsor. Töltsd ki a részeredményeket, ellenőrizd, és nézd meg a levezetést. A ZH-n a részszámításokért külön pont jár.</p></div></div>'+
-    '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span><h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c)+
+    '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span><h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c, c.type === "sup" ? cs.v : null, st)+(c.type === "sup" ? '<p class="hint" style="margin:-4px 0 10px">A táblázat utolsó oszlopában add meg a beszállítók sorrendjét, alul pedig a részszámításokat.</p>' : '')+
     (c.type === "grav" ? '<div class="fillfig gravfig" style="margin-top:4px">'+figHtml("gravity", null, c.d.pts.map(function(p){ return [p[0],p[1],p[2],p[3]]; }), c.d.unit)+'</div>' : "")+
     '<div class="calcgrid" id="cgrid">'+grouped+'</div>'+
     (cs.checked ? '<div class="fb"><div class="verdict '+(nOk===fs.length?"ok":nOk?"half":"no")+'"><span class="m"><span>'+(nOk===fs.length?"✓":"!")+'</span></span>'+nOk+' / '+fs.length+' részeredmény helyes</div></div>' : "")+
     '<div class="fbrow" style="margin-top:18px;justify-content:flex-start"><button class="btn primary" id="cCheck">Ellenőrzés</button><button class="btn" id="cSteps">'+(cs.steps?"Levezetés elrejtése":"Megoldás lépésenként")+'</button><button class="btn ghost" id="cNew2">Új adatok →</button>'+((store.calcHist||[]).some(function(e){ return e.id === cs.id; }) ? '<span class="kbd">✓ mentve a megoldott feladataim közé</span>' : '')+'</div>'+
     (cs.steps ? '<div class="steps"><span class="lbl">Levezetés</span>'+calcSteps(c)+'</div>' : "")+
     '</section>';
-  wireAnswer(document.getElementById("cgrid"), cs, function(){ if(cs.checked){ cs.checked = false; } });
+  wireAnswer($main.querySelector("section.task"), cs, function(){ if(cs.checked){ cs.checked = false; } });
   document.getElementById("cCheck").onclick = function(){
     var first = !cs.checked && !cs.counted; cs.checked = true;
-    var all = fs.every(function(f){ var val = cs.v[f[0]]; return f[4]==="sel" ? (val !== "" && val != null && +val === f[2]) : numOk(val, f[2]); });
+    var all = fs.every(function(f){ return fieldOk(f, cs.v[f[0]]); });
     if(!cs.counted){ cs.counted = true; store.calcStats[c.type].n++; if(all) store.calcStats[c.type].ok++; }
     saveHist(cs);
     var y = window.scrollY; renderCalc(); window.scrollTo(0, y);
