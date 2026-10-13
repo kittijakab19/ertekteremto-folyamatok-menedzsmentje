@@ -283,7 +283,7 @@ function calcText(c, v, st, ro){
       '<ul><li>A terméket az értékeléstől számított <b>'+d.week+'. héttől</b> tervezik felhasználni; minden késő hétért <b>'+d.pen+' büntetőpontot</b> számolnak el.</li>'+
       '<li>A beszerzési ár minimuma <b>'+hu(d.min,0)+' euró</b>; a magasabb árért <b>'+d.step+' eurónként 1 pontot</b> vonnak le.</li>'+
       '<li>Mindkét szempont mentén legfeljebb <b>100 pont</b> érhető el.</li></ul>'+
-      '<div class="tw"><table><tr><th>Beszállító</th><th>Ár (euró)</th><th>Szállítás (hét)</th>'+(v ? '<th>Sorrend <span class="kbd" style="font-weight:500">(1. = legjobb)</span></th>' : '')+'</tr>'+
+      '<div class="tw"><table class="eqtab"><tr><th>Beszállító</th><th>Ár (euró)</th><th>Szállítás (hét)</th>'+(v ? '<th>Sorrend</th>' : '')+'</tr>'+
       d.sup.map(function(s,i){
         var cell = "";
         if(v){
@@ -296,7 +296,7 @@ function calcText(c, v, st, ro){
         return '<tr><td><b>'+LET[i]+'</b></td><td class="num">'+hu(s[0],0)+'</td><td class="num">'+s[1]+'</td>'+cell+'</tr>'; }).join("")+'</table></div>';
   }
   return '<p>Egy vállalat egy termékét '+d.pts.length+' üzletében értékesíti. A vezetés úgy döntött, hogy az üzleteket ezentúl egy új raktárból (<b>R</b>) látja el. A <b>gravitációs központ módszerével</b> határozd meg, hova érdemes telepíteni a raktárat!</p>'+
-    '<div class="tw"><table><tr><th>Üzlet</th><th>X koordináta</th><th>Y koordináta</th><th>Éves értékesítés ('+d.unit+')</th></tr>'+
+    '<div class="tw"><table class="eqtab"><tr><th>Üzlet</th><th>X koordináta</th><th>Y koordináta</th><th>Éves értékesítés ('+d.unit+')</th></tr>'+
     d.pts.map(function(p){ return '<tr><td><b>'+p[0]+'</b></td><td class="num">'+p[1]+'</td><td class="num">'+p[2]+'</td><td class="num">'+hu(p[3],0)+'</td></tr>'; }).join("")+'</table></div>';
 }
 /* mezők: [kulcs, címke, várt érték, pont, típus] */
