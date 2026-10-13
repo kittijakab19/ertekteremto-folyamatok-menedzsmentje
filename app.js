@@ -231,7 +231,7 @@ function genSup(sample){
   if(sample){ d = { wP:0.5, wD:0.5, min:550, step:10, week:8, pen:20, sup:[[650,12],[750,12],[950,9],[1200,8]] }; }
   else {
     for(var tries=0; tries<60; tries++){
-      var w = pick([[0.5,0.5],[0.5,0.5],[0.6,0.4],[0.4,0.6],[0.7,0.3],[0.3,0.7]]);
+      var w = [0.5,0.5]; /* az oktató kérésére mindig azonos súly */
       d = { wP:w[0], wD:w[1], min:rnd(300,900,50), step:pick([10,10,20,5]), week:rnd(4,10), pen:pick([10,15,20,25]), sup:[] };
       var maxSteps = 95, used = {};
       for(var i=0;i<4;i++){
@@ -279,7 +279,7 @@ function fieldOk(f, val){ return f[4] === "rank" ? (val !== "" && val != null &&
 function calcText(c, v, st, ro){
   var d = c.d;
   if(c.type === "sup"){
-    return '<p>Egy vállalat beszállítót választ egy termékhez. Az értékelés két szempontot vet össze: a termék <b>árát</b> (súlya <b>'+wfmt(d.wP)+'</b>) és a <b>szállítási határidőt</b> (súlya <b>'+wfmt(d.wD)+'</b>). A minőségi megfelelést előminősítéssel már ellenőrizték.</p>'+
+    return '<p>Egy vállalat beszállítót választ egy termékhez. Az értékelés két szempontot vet össze: a termék <b>árát</b> és a <b>szállítási határidőt</b>'+(d.wP === 0.5 && d.wD === 0.5 ? ', <b>azonos súllyal</b> (50–50%)' : ' (súlyok: ár <b>'+wfmt(d.wP)+'</b>, szállítás <b>'+wfmt(d.wD)+'</b>)')+'. A minőségi megfelelést előminősítéssel már ellenőrizték.</p>'+
       '<ul><li>A terméket az értékeléstől számított <b>'+d.week+'. héttől</b> tervezik felhasználni; minden késő hétért <b>'+d.pen+' büntetőpontot</b> számolnak el.</li>'+
       '<li>A beszerzési ár minimuma <b>'+hu(d.min,0)+' euró</b>; a magasabb árért <b>'+d.step+' eurónként 1 pontot</b> vonnak le.</li>'+
       '<li>Mindkét szempont mentén legfeljebb <b>100 pont</b> érhető el.</li></ul>'+
