@@ -405,12 +405,12 @@ function qBodyHtml(q, inst, a, pfx){
   }
   return "";
 }
-function calcInput(f, val, c, state){
+function calcInput(f, val, c, state, ptsTxt){
   var ctl;
   if(f[4] === "sel"){
     ctl = '<select data-act="txt" data-p="" data-f="'+f[0]+'"><option value="">válassz…</option>'+c.d.sup.map(function(s,i){ return '<option value="'+i+'"'+(String(val)===String(i)?" selected":"")+'>'+LET[i]+'</option>'; }).join("")+'</select>';
   } else ctl = '<input type="text" inputmode="decimal" autocomplete="off" data-act="txt" data-p="" data-f="'+f[0]+'" value="'+esc(val==null?"":val)+'" placeholder="0,00">';
-  return '<div class="calcrow'+(state ? " "+state.cls : "")+'"><label>'+esc(f[1])+'<small>'+f[3]+' pont</small></label>'+ctl+'<span class="st">'+(state ? state.txt : "")+'</span></div>';
+  return '<div class="calcrow'+(state ? " "+state.cls : "")+'"><label>'+esc(f[1])+'<small>'+(ptsTxt != null ? ptsTxt : f[3]+' pont')+'</small></label>'+ctl+'<span class="st">'+(state ? state.txt : "")+'</span></div>';
 }
 /* delegált eseménykezelés a kitöltéshez */
 function wireAnswer(root, a, onChange){
@@ -642,12 +642,14 @@ function railCalc(){
   document.getElementById("cHist").onclick = function(){ store.calcView = "hist"; save(); renderCalc(); window.scrollTo(0,0); };
 }
 function calcMain(cs, c, fs, title){
+  var zh = {}; calcFields(c, false).forEach(function(f){ zh[f[0]] = f[3]; });
+  var zhP = cs.checked ? grade({ k:"calc", c:c }, { v:cs.v }, 5).p : 0;
   var st = null; if(cs.checked){ st = {}; fs.forEach(function(f){ st[f[0]] = fieldOk(f, cs.v[f[0]]); }); }
   var rows = fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f){
     var state = null;
     if(cs.checked){ var ok = st[f[0]];
       state = { cls: ok ? "ok" : "no", txt: ok ? "✓ helyes" : "✕ " + hu(f[2]) }; }
-    return calcInput(f, cs.v[f[0]], c, state);
+    return calcInput(f, cs.v[f[0]], c, state, zh[f[0]] != null ? 'próba-ZH-ban: '+hu(zh[f[0]])+' pont' : 'részszámítás (a próba-ZH ezt külön nem pontozza)');
   });
   var grouped = "";
   if(c.type === "sup"){
@@ -656,10 +658,10 @@ function calcMain(cs, c, fs, title){
   var nOk = 0; if(cs.checked) fs.forEach(function(f){ if(st[f[0]]) nOk++; });
   $main.innerHTML = '<div class="head"><div><span class="eyebrow">Számolás · 2 feladat a ZH-n, 10 pont</span><h2>Számolás</h2>'+
     '<p>Minden kattintásra új adatsor. Töltsd ki a részeredményeket, ellenőrizd, és nézd meg a levezetést. A ZH-n a részszámításokért külön pont jár.</p></div></div>'+
-    '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span><h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c, c.type === "sup" ? cs.v : null, st)+(c.type === "sup" ? '<p class="hint" style="margin:-4px 0 10px">A táblázat utolsó oszlopában add meg a beszállítók sorrendjét, alul pedig a részszámításokat.</p>' : '')+
+    '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span><h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c, c.type === "sup" ? cs.v : null, st)+(c.type === "sup" ? '<p class="hint" style="margin:-4px 0 10px">A táblázat utolsó oszlopában add meg a beszállítók sorrendjét, alul pedig a részszámításokat. A próba-ZH-ban a feladat <b>5 pontot</b> ér: a négy összpontszám 1–1 pont, a négy helyezés 0,25–0,25 pont.</p>' : '<p class="hint" style="margin:-4px 0 10px">A próba-ZH-ban a feladat <b>5 pontot</b> ér: a súlyszámok összege 1 pont, az X és az Y koordináta 2–2 pont.</p>')+
     (c.type === "grav" ? '<div class="fillfig gravfig" style="margin-top:4px">'+figHtml("gravity", null, c.d.pts.map(function(p){ return [p[0],p[1],p[2],p[3]]; }), c.d.unit)+'</div>' : "")+
     '<div class="calcgrid" id="cgrid">'+grouped+'</div>'+
-    (cs.checked ? '<div class="fb"><div class="verdict '+(nOk===fs.length?"ok":nOk?"half":"no")+'"><span class="m"><span>'+(nOk===fs.length?"✓":"!")+'</span></span>'+nOk+' / '+fs.length+' részeredmény helyes</div></div>' : "")+
+    (cs.checked ? '<div class="fb"><div class="verdict '+(nOk===fs.length?"ok":nOk?"half":"no")+'"><span class="m"><span>'+(nOk===fs.length?"✓":"!")+'</span></span>'+nOk+' / '+fs.length+' részeredmény helyes · a próba-ZH pontozása szerint '+hu(zhP)+' / 5 pont</div></div>' : "")+
     '<div class="fbrow" style="margin-top:18px;justify-content:flex-start"><button class="btn primary" id="cCheck">Ellenőrzés</button><button class="btn" id="cSteps">'+(cs.steps?"Levezetés elrejtése":"Megoldás lépésenként")+'</button><button class="btn ghost" id="cNew2">Új adatok →</button>'+((store.calcHist||[]).some(function(e){ return e.id === cs.id; }) ? '<span class="kbd">✓ mentve a megoldott feladataim közé</span>' : '')+'</div>'+
     (cs.steps ? '<div class="steps"><span class="lbl">Levezetés</span>'+calcSteps(c)+'</div>' : "")+
     '</section>';
