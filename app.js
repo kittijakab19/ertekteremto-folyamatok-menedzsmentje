@@ -305,8 +305,10 @@ function calcFields(c, full){
   var r = c.r, f = [];
   if(c.type === "sup"){
     c.d.sup.forEach(function(s,i){
-      if(full){ f.push(["p"+i, LET[i]+" · árpontszám", r.pp[i], 1, "num"]); f.push(["d"+i, LET[i]+" · szállítási pontszám", r.dp[i], 1, "num"]); }
-      f.push(["t"+i, LET[i]+" · súlyozott összpontszám", r.tot[i], 1, "num"]);
+      /* próba-ZH: 0,25 + 0,25 + 0,5 pont beszállítónként, + 0,25 a helyezés = 5 pont */
+      f.push(["p"+i, LET[i]+" · árpontszám", r.pp[i], full ? 1 : 0.25, "num"]);
+      f.push(["d"+i, LET[i]+" · szállítási pontszám", r.dp[i], full ? 1 : 0.25, "num"]);
+      f.push(["t"+i, LET[i]+" · súlyozott összpontszám", r.tot[i], full ? 1 : 0.5, "num"]);
     });
     var rk = ranksOf(r);
     c.d.sup.forEach(function(s,i){ f.push(["r"+i, LET[i]+" · sorrend", rk[i], full ? 1 : 0.25, "rank"]); });
@@ -400,7 +402,7 @@ function qBodyHtml(q, inst, a, pfx){
   if(q.k === "calc"){
     a.v = a.v || {};
     var fs = calcFields(q.c, false);
-    return '<div class="task" style="box-shadow:none;margin-top:16px;padding:18px 18px">'+calcText(q.c, q.c.type === "sup" ? a.v : null)+'</div><div class="calcgrid">'+fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f){ return calcInput(f, a.v[f[0]], q.c); }).join("")+'</div>';
+    return '<div class="task" style="box-shadow:none;margin-top:16px;padding:18px 18px">'+calcText(q.c, q.c.type === "sup" ? a.v : null)+'</div><div class="calcgrid">'+fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f, k){ return (q.c.type === "sup" && k % 3 === 0 ? '<div class="calchead">'+LET[k/3]+' beszállító</div>' : '')+calcInput(f, a.v[f[0]], q.c); }).join("")+'</div>';
   }
   return "";
 }
@@ -409,7 +411,7 @@ function calcInput(f, val, c, state, ptsTxt){
   if(f[4] === "sel"){
     ctl = '<select data-act="txt" data-p="" data-f="'+f[0]+'"><option value="">válassz…</option>'+c.d.sup.map(function(s,i){ return '<option value="'+i+'"'+(String(val)===String(i)?" selected":"")+'>'+LET[i]+'</option>'; }).join("")+'</select>';
   } else ctl = '<input type="text" inputmode="decimal" autocomplete="off" data-act="txt" data-p="" data-f="'+f[0]+'" value="'+esc(val==null?"":val)+'" placeholder="0,00">';
-  return '<div class="calcrow'+(state ? " "+state.cls : "")+'"><label>'+esc(f[1])+''+(ptsTxt === "" ? "" : '<small>'+(ptsTxt != null ? ptsTxt : f[3]+' pont')+'</small>')+'</label>'+ctl+'<span class="st">'+(state ? state.txt : "")+'</span></div>';
+  return '<div class="calcrow'+(state ? " "+state.cls : "")+'"><label>'+esc(f[1])+''+(ptsTxt === "" ? "" : '<small>'+(ptsTxt != null ? ptsTxt : hu(f[3])+' pont')+'</small>')+'</label>'+ctl+'<span class="st">'+(state ? state.txt : "")+'</span></div>';
 }
 /* delegált eseménykezelés a kitöltéshez */
 function wireAnswer(root, a, onChange){
@@ -511,9 +513,9 @@ function reviewBody(q, inst, a, g, pfx, ovrOn){
   }
   if(q.k === "calc"){
     var fs = calcFields(q.c, false);
-    return '<div class="task" style="box-shadow:none;padding:18px">'+calcText(q.c, q.c.type === "sup" ? (a.v || {}) : null, g.fields, true)+'</div><div class="calcgrid">'+fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f){
+    return '<div class="task" style="box-shadow:none;padding:18px">'+calcText(q.c, q.c.type === "sup" ? (a.v || {}) : null, g.fields, true)+'</div><div class="calcgrid">'+fs.filter(function(f){ return f[4] !== "rank"; }).map(function(f, k){
       var ok = g.fields[f[0]], val = a.v && a.v[f[0]];
-      return '<div class="calcrow '+(ok?"ok":"no")+'"><label>'+esc(f[1])+'<small>'+f[3]+' pont</small></label><span class="num" style="font-weight:600">'+(val == null || val === "" ? "<i>üres</i>" : esc(val))+'</span><span class="st">'+(ok ? "✓ helyes" : "✕ "+hu(f[2]))+'</span></div>';
+      return (q.c.type === "sup" && k % 3 === 0 ? '<div class="calchead">'+LET[k/3]+' beszállító</div>' : '')+'<div class="calcrow '+(ok?"ok":"no")+'"><label>'+esc(f[1])+'<small>'+hu(f[3])+' pont</small></label><span class="num" style="font-weight:600">'+(val == null || val === "" ? "<i>üres</i>" : esc(val))+'</span><span class="st">'+(ok ? "✓ helyes" : "✕ "+hu(f[2]))+'</span></div>';
     }).join("")+'</div><div class="steps"><span class="lbl">Megoldás lépésenként</span>'+calcSteps(q.c)+'</div>';
   }
   return "";
