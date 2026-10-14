@@ -226,12 +226,13 @@ function numOk(input, exp){ var u = parseNum(input); if(isNaN(u)) return false; 
 
 /* ================= SZÁMOLÁS – GENERÁTOROK ================= */
 var LET = "ABCDEF";
-function genSup(sample){
+function genSup(sample, uneven){
   var d;
   if(sample){ d = { wP:0.5, wD:0.5, min:550, step:10, week:8, pen:20, sup:[[650,12],[750,12],[950,9],[1200,8]] }; }
   else {
     for(var tries=0; tries<60; tries++){
-      var w = [0.5,0.5]; /* az oktató kérésére mindig azonos súly */
+      /* a ZH-n azonos súly (50–50%); a Számolás fülön 2–3 feladatonként eltérő súly a gyakorláshoz */
+      var w = uneven ? pick([[0.6,0.4],[0.4,0.6],[0.7,0.3],[0.3,0.7],[0.8,0.2],[0.2,0.8]]) : [0.5,0.5];
       d = { wP:w[0], wD:w[1], min:rnd(300,900,50), step:pick([10,10,20,5]), week:rnd(4,10), pen:pick([10,15,20,25]), sup:[] };
       var maxSteps = 95, used = {};
       for(var i=0;i<4;i++){
@@ -568,7 +569,13 @@ function wireTopics(root, after){
 /* ================= SZÁMOLÁS FÜL ================= */
 var calcState = null;
 function newCalc(sample){
-  var c = store.calcType === "sup" ? genSup(sample) : genGrav(sample);
+  var uneven = false;
+  if(store.calcType === "sup" && !sample){
+    store.supSince = (store.supSince || 0) + 1;
+    if(store.supSince >= (store.supNext || 3)){ uneven = true; store.supSince = 0; store.supNext = pick([2,3]); }
+    save();
+  }
+  var c = store.calcType === "sup" ? genSup(sample, uneven) : genGrav(sample);
   calcState = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), c:c, v:{}, checked:false, steps:false, sample:!!sample };
 }
 function calcScore(c, v){
@@ -658,7 +665,7 @@ function calcMain(cs, c, fs, title){
   var nOk = 0; if(cs.checked) fs.forEach(function(f){ if(st[f[0]]) nOk++; });
   $main.innerHTML = '<div class="head"><div><span class="eyebrow">Számolás · 2 feladat a ZH-n, 10 pont</span><h2>Számolás</h2>'+
     '<p>Minden kattintásra új adatsor. Töltsd ki a részeredményeket, ellenőrizd, és nézd meg a levezetést. A ZH-n a részszámításokért külön pont jár.</p></div></div>'+
-    '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span><h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c, c.type === "sup" ? cs.v : null, st)+(c.type === "sup" ? '<p class="hint" style="margin:-4px 0 10px">A táblázat utolsó oszlopában add meg a beszállítók sorrendjét, alul pedig a részszámításokat.</p>' : '')+
+    '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span>'+(c.type === "sup" && c.d.wP !== 0.5 ? ' <span class="chip sand" style="margin-bottom:12px">eltérő súlyok</span>' : '')+'<h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c, c.type === "sup" ? cs.v : null, st)+(c.type === "sup" ? '<p class="hint" style="margin:-4px 0 10px">A táblázat utolsó oszlopában add meg a beszállítók sorrendjét, alul pedig a részszámításokat.</p>' : '')+
     (c.type === "grav" ? '<div class="fillfig gravfig" style="margin-top:4px">'+figHtml("gravity", null, c.d.pts.map(function(p){ return [p[0],p[1],p[2],p[3]]; }), c.d.unit)+'</div>' : "")+
     '<div class="calcgrid" id="cgrid">'+grouped+'</div>'+
     (cs.checked ? '<div class="fb"><div class="verdict '+(nOk===fs.length?"ok":nOk?"half":"no")+'"><span class="m"><span>'+(nOk===fs.length?"✓":"!")+'</span></span>'+nOk+' / '+fs.length+' részeredmény helyes · a próba-ZH pontozása szerint '+hu(zhP)+' / 5 pont</div></div>' : "")+
