@@ -297,7 +297,7 @@ function calcText(c, v, st, ro){
         return '<tr><td><b>'+LET[i]+'</b></td><td class="num">'+hu(s[0],0)+'</td><td class="num">'+s[1]+'</td>'+cell+'</tr>'; }).join("")+'</table></div>';
   }
   return '<p>Egy vállalat egy termékét '+d.pts.length+' üzletében értékesíti. A vezetés úgy döntött, hogy az üzleteket ezentúl egy új raktárból (<b>R</b>) látja el. A <b>gravitációs központ módszerével</b> határozd meg, hova érdemes telepíteni a raktárat!</p>'+
-    '<div class="tw"><table class="eqtab"><tr><th>Üzlet</th><th>X koordináta</th><th>Y koordináta</th><th>Éves értékesítés ('+d.unit+')</th></tr>'+
+    '<div class="tw"><table class="eqtab"><tr><th>Üzlet</th><th>X koordináta</th><th>Y koordináta</th><th>Értékesítés ('+d.unit+') – súlyszám</th></tr>'+
     d.pts.map(function(p){ return '<tr><td><b>'+p[0]+'</b></td><td class="num">'+p[1]+'</td><td class="num">'+p[2]+'</td><td class="num">'+hu(p[3],0)+'</td></tr>'; }).join("")+'</table></div>';
 }
 /* mezők: [kulcs, címke, várt érték, pont, típus] */
@@ -311,10 +311,8 @@ function calcFields(c, full){
     var rk = ranksOf(r);
     c.d.sup.forEach(function(s,i){ f.push(["r"+i, LET[i]+" · sorrend", rk[i], full ? 1 : 0.25, "rank"]); });
   } else {
-    f.push(["sv", "A súlyszámok (értékesítés) összege", r.sv, 1, "num"]);
-    if(full){ f.push(["sx", "Σ (értékesítés × X)", r.sx, 1, "num"]); f.push(["sy", "Σ (értékesítés × Y)", r.sy, 1, "num"]); }
-    f.push(["x", "A raktár X koordinátája", r.x, 2, "num"]);
-    f.push(["y", "A raktár Y koordinátája", r.y, 2, "num"]);
+    f.push(["x", "A raktár X koordinátája", r.x, 2.5, "num"]);
+    f.push(["y", "A raktár Y koordinátája", r.y, 2.5, "num"]);
   }
   return f;
 }
@@ -666,7 +664,6 @@ function calcMain(cs, c, fs, title){
   $main.innerHTML = '<div class="head"><div><span class="eyebrow">Számolás · 2 feladat a ZH-n, 10 pont</span><h2>Számolás</h2>'+
     '<p>Minden kattintásra új adatsor. Töltsd ki a részeredményeket, ellenőrizd, és nézd meg a levezetést. A ZH-n a részszámításokért külön pont jár.</p></div></div>'+
     '<section class="task" data-src="t8"><span class="chip src" style="margin-bottom:12px">'+(cs.sample ? "mintafeladat · dia" : "véletlen adatok")+'</span>'+(c.type === "sup" && c.d.wP !== 0.5 ? ' <span class="chip sand" style="margin-bottom:12px">eltérő súlyok</span>' : '')+'<h3 style="font-size:20px;font-weight:800;margin:6px 0 12px">'+title+'</h3>'+calcText(c, c.type === "sup" ? cs.v : null, st)+(c.type === "sup" ? '<p class="hint" style="margin:-4px 0 10px">A táblázat utolsó oszlopában add meg a beszállítók sorrendjét, alul pedig a részszámításokat.</p>' : '')+
-    (c.type === "grav" ? '<div class="fillfig gravfig" style="margin-top:4px">'+figHtml("gravity", null, c.d.pts.map(function(p){ return [p[0],p[1],p[2],p[3]]; }), c.d.unit)+'</div>' : "")+
     '<div class="calcgrid" id="cgrid">'+grouped+'</div>'+
     (cs.checked ? '<div class="fb"><div class="verdict '+(nOk===fs.length?"ok":nOk?"half":"no")+'"><span class="m"><span>'+(nOk===fs.length?"✓":"!")+'</span></span>'+nOk+' / '+fs.length+' részeredmény helyes · a próba-ZH pontozása szerint '+hu(zhP)+' / 5 pont</div></div>' : "")+
     '<div class="fbrow" style="margin-top:18px;justify-content:flex-start"><button class="btn primary" id="cCheck">Ellenőrzés</button><button class="btn" id="cSteps">'+(cs.steps?"Levezetés elrejtése":"Megoldás lépésenként")+'</button><button class="btn ghost" id="cNew2">Új adatok →</button>'+((store.calcHist||[]).some(function(e){ return e.id === cs.id; }) ? '<span class="kbd">✓ mentve a megoldott feladataim közé</span>' : '')+'</div>'+
