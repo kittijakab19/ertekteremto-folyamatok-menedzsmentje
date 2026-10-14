@@ -259,7 +259,7 @@ function genGrav(sample){
   var d;
   if(sample) d = { unit:"db", pts:[["A",150,75,6000],["B",100,300,8200],["C",275,380,7000]] };
   else {
-    var n = pick([3,3,4]); d = { unit:pick(["db","db","tonna"]), pts:[] };
+    var n = pick([3,3,4]); d = { unit:"db", pts:[] };
     for(var i=0;i<n;i++){
       var p, tries = 0;
       do { p = [LET[i], rnd(20,480,5), rnd(20,480,5), rnd(10,120)*100]; tries++; }
@@ -297,7 +297,7 @@ function calcText(c, v, st, ro){
         return '<tr><td><b>'+LET[i]+'</b></td><td class="num">'+hu(s[0],0)+'</td><td class="num">'+s[1]+'</td>'+cell+'</tr>'; }).join("")+'</table></div>';
   }
   return '<p>Egy vállalat egy termékét '+d.pts.length+' üzletében értékesíti. A vezetés úgy döntött, hogy az üzleteket ezentúl egy új raktárból (<b>R</b>) látja el. A <b>gravitációs központ módszerével</b> határozd meg, hova érdemes telepíteni a raktárat!</p>'+
-    '<div class="tw"><table class="eqtab"><tr><th>Üzlet</th><th>X koordináta</th><th>Y koordináta</th><th>Értékesítés ('+d.unit+') – súlyszám</th></tr>'+
+    '<div class="tw"><table class="eqtab"><tr><th>Üzlet</th><th>X koordináta</th><th>Y koordináta</th><th>Értékesítés (db) – súlyszám</th></tr>'+
     d.pts.map(function(p){ return '<tr><td><b>'+p[0]+'</b></td><td class="num">'+p[1]+'</td><td class="num">'+p[2]+'</td><td class="num">'+hu(p[3],0)+'</td></tr>'; }).join("")+'</table></div>';
 }
 /* mezők: [kulcs, címke, várt érték, pont, típus] */
