@@ -36,6 +36,16 @@ function hu(x, d){ if(x == null || isNaN(x)) return "–"; d = d == null ? 2 : d
 function pts(x){ return hu(x, 2); }
 QS.forEach(function(q){ q.id = q.k + hash(q.q + "|" + JSON.stringify(q.o||q.b||q.it||q.acc||q.parts||"")); });
 var QBY = {}; QS.forEach(function(q){ QBY[q.id] = q; });
+/* ha egy elmentett próba-ZH olyan kérdésre hivatkozik, ami azóta megváltozott, azt kihagyjuk, hogy az oldal ne álljon le */
+(function(){
+  var ex = store.exam; if(!ex || !ex.items) return;
+  var items = [], ans = {}, pts = {};
+  ex.items.forEach(function(it, i){
+    if(it.calc || (it.inst && QBY[it.inst.id])){ var j = items.length; items.push(it); if(ex.ans && ex.ans[i] != null) ans[j] = ex.ans[i]; if(ex.pts && ex.pts[i] != null) pts[j] = ex.pts[i]; }
+  });
+  if(!items.length){ store.exam = null; store.quizView = "start"; save(); return; }
+  if(items.length !== ex.items.length){ ex.items = items; ex.ans = ans; ex.pts = pts; ex.i = Math.min(ex.i || 0, items.length - 1); save(); }
+})();
 
 var $main = document.getElementById("main"), $rail = document.getElementById("railPanel");
 var zoom = document.getElementById("zoom");
@@ -61,7 +71,10 @@ function render(){
   if(store.view === "book") renderBook();
   else if(store.view === "lecture") renderLecture();
   else if(store.view === "calc") renderCalc();
-  else renderQuiz();
+  else {
+    try { renderQuiz(); }
+    catch(e){ /* sérült mentett állapot esetén tiszta kezdőlap */ if(window.console) console.error(e); store.exam = null; store.quizView = "start"; save(); renderStart(); }
+  }
   ensureTimer();
 }
 function goSlide(id){
