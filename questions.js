@@ -78,9 +78,6 @@ window.QS = [
 {k:"s",t:"t2",sl:"e1-12",q:"Az érték kétdimenziós megközelítésében mit neveznek „értékkritériumnak”?",
  o:["A preferált hasznosságkombinációt","A felhasznált erőforrásokat","A vevői elégedettséget","A versenytársak árát"],a:0,
  why:"„…a preferált hasznosságkombinációnak (értékkritérium) a megszerzéséhez szükséges ráfordításokkal való összehasonlítása.”"},
-{k:"s",t:"t2",sl:"e1-13",q:"A „vevői érték = minőség × szolgáltatás / ?” képletben mi szerepel a NEVEZŐBEN?",
- o:["Költség × idő","Minőség × szolgáltatás","Felhasznált erőforrások","MPP"],a:0,
- why:"vevői érték = (minőség × szolgáltatás) / (költség × idő)."},
 {k:"s",t:"t2",sl:"e1-13",q:"Mi a közös a vevői érték mérésének képleteiben?",
  o:["Mindegyik tört: a számlálóban a haszon, a nevezőben a ráfordítás","Mindegyik pénzben adja meg az értéket","Mindegyik csak a minőséget veszi figyelembe","Mindegyik különbségként számol"],a:0,
  why:"Mind arányszám: kapott haszon / feláldozott ráfordítás."},
@@ -749,13 +746,6 @@ window.QS = [
   {k:"s",q:"(C) szabványos üvegfiola nagy tételben:",o:["Befolyásolható","Stratégiai","Szűk keresztmetszetű","Nem kritikus"],a:0},
   {k:"s",q:"(D) speciális kupak:",o:["Szűk keresztmetszetű","Nem kritikus","Stratégiai","Befolyásolható"],a:0}],
  why:"Kraljic: fontosság × piaci komplexitás."},
-{k:"c",t:"t2",sl:"e1-13",q:"Egy vevő két mobilszolgáltatót hasonlít össze. Az egyik jobb lefedettséget és ügyfélszolgálatot kínál, de drágább, és hosszabb a szerződéskötés.",
- parts:[
-  {k:"s",q:"A „vevői érték = minőség × szolgáltatás / költség × idő” képlet szerint a lefedettség és az ügyfélszolgálat a tört melyik részébe kerül?",o:["A számlálóba (minőség × szolgáltatás)","A nevezőbe (költség × idő)","Egyikbe sem","Csak az MPP-be"],a:0},
-  {k:"s",q:"A hosszabb szerződéskötési idő a képlet melyik tagját növeli?",o:["Az időt a nevezőben, így csökkenti a vevői értéket","A szolgáltatást a számlálóban","A minőséget","Egyiket sem"],a:0},
-  {k:"s",q:"Melyik megközelítés lényege, hogy az érték a hasznosság és a ráfordítás összevetése?",o:["Kétdimenziós megközelítés (Walters–Lancaster)","Maslow-féle szükségleti piramis","Porter értéklánca","Kraljic-mátrix"],a:0},
-  {k:"s",q:"Ha a vevő utólag megkérdezik, ajánlaná-e a szolgáltatót, melyik mutatót mérik?",o:["NPS","CES","CLV","Churn rate"],a:0}],
- why:"Christopher: (minőség × szolgáltatás) / (költség × idő)."},
 {k:"c",t:"t7",sl:"e2-31",q:"Egy autóipari beszállító és egy autógyár 10 éves, kizárólagos szerződést köt. A beszállító a gyár mellé telepít üzemet, a felek közösen fejlesztenek új alkatrészt, és megosztják egymással a gyártási terveiket.",
  parts:[
   {k:"s",q:"Melyik kapcsolatmenedzsment-modell?",o:["Stratégiai partnerkapcsolat","Tranzakcióorientált modell","Kapcsolatorientált modell","Hagyományos üzleti modell"],a:0},
